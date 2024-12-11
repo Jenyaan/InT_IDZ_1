@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Bot</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+    <canvas id="gP"></canvas>
+<script>
+var rand = function (min, max) { 
+    let k = Math.floor(Math.random() * (max - min) + min); 
+    return Math.round(k / s) * s;
+};
+
+var newA = function () { 
+    a = [rand(0, gP.width), rand(0, gP.height)];
+},
+newB = function () { 
+    sBody = [{ x: 0, y: 0 }];
+};
+
+var gP = document.getElementById('gP'),
+    g = gP.getContext('2d'),
+    sBody = null, 
+    d = 1, 
+    a = null, 
+    obstacles = [], // Препятствия
+    s = 25;
+
+newB(); newA();
+
+// Установлюємо розміри canvas
+gP.width = innerWidth; 
+gP.height = innerHeight;
+
+
+// Створення перешкод
+for (let i = 0; i < 10; i++) {
+    obstacles.push({ x: rand(0, gP.width), y: rand(0, gP.height) });
+}
+
+setInterval(function () {
+    if (a[0] + s >= gP.width || a[1] + s >= gP.height) newA(); 
+    g.clearRect(0, 0, gP.width, gP.height);
+
+    // Малюємо яблуко
+    g.fillStyle = "red";
+    g.fillRect(...a, s, s);
+
+    // Малюємо перешкоди
+    g.fillStyle = "gray";
+    obstacles.forEach(function (obs) {
+        g.fillRect(obs.x, obs.y, s, s);
+    });
+
+    g.fillStyle = "#000";
+
+    // Перевірка зіткнення з тілом
+    sBody.forEach(function (el, i) {
+        if (el.x == sBody[sBody.length - 1].x && el.y == sBody[sBody.length - 1].y && i < sBody.length - 1) {
+            sBody.splice(0, sBody.length - 1);
+            sBody = [{ x: 0, y: 0 }];
+            d = 1;
+        }
+    });
+
+    // Логіка змійки
+    var m = sBody[0],
+        f = { x: m.x, y: m.y },
+        l = sBody[sBody.length - 1];
+
+    if (d == 1) f.x = l.x + s, f.y = Math.round(l.y / s) * s;
+    if (d == 2) f.y = l.y + s, f.x = Math.round(l.x / s) * s;
+    if (d == 3) f.x = l.x - s, f.y = Math.round(l.y / s) * s;
+    if (d == 4) f.y = l.y - s, f.x = Math.round(l.x / s) * s;
+
+    sBody.push(f); 
+    sBody.splice(0, 1); 
+
+    // Відображення змійки
+    sBody.forEach(function (pob) {
+        if (pob.x > Math.round(gP.width / s) * s) pob.x = 0;
+        if (pob.y > Math.round(gP.height / s) * s) pob.y = 0;
+        if (pob.x < 0) pob.x = Math.round(gP.width / s) * s;
+        if (pob.y < 0) pob.y = Math.round(gP.height / s) * s;
+
+        // З'їдання яблука
+        if (pob.x == a[0] && pob.y == a[1]) {
+            newA();
+            sBody.unshift({ x: f.x - s, y: f.y });
+        }
+
+        // Перевірка зіткнення з перешкодами
+        obstacles.forEach(function (obs) {
+            if (pob.x == obs.x && pob.y == obs.y) {
+                sBody.splice(0, sBody.length - 1);
+                sBody = [{ x: 0, y: 0 }];
+                d = 1;
+            }
+        });
+
+        g.fillRect(pob.x, pob.y, s, s);
+    });
+
+    botLogic(); // Логіка бота
+}, 1000 / 70);
+
+// Логіка бота для автоматичного вибору напряму
+function botLogic() {
+    let head = sBody[sBody.length - 1];
+
+    if (head.x < a[0] && d != 3 && !checkCollision(head.x + s, head.y)) {
+        d = 1; // Вправо
+    } else if (head.x > a[0] && d != 1 && !checkCollision(head.x - s, head.y)) {
+        d = 3; // Вліво
+    } else if (head.y < a[1] && d != 4 && !checkCollision(head.x, head.y + s)) {
+        d = 2; // Вниз
+    } else if (head.y > a[1] && d != 2 && !checkCollision(head.x, head.y - s)) {
+        d = 4; // Вгору
+    } else {
+        // Якщо основний шлях заблоковано, обираємо безпечний напрямок
+        let possibleDirections = [
+            { dir: 1, x: head.x + s, y: head.y },
+            { dir: 2, x: head.x, y: head.y + s },
+            { dir: 3, x: head.x - s, y: head.y },
+            { dir: 4, x: head.x, y: head.y - s }
+        ];
+
+        let safeDirection = possibleDirections.find(move => !checkCollision(move.x, move.y));
+        if (safeDirection) {
+            d = safeDirection.dir;
+        }
+    }
+}
+
+// Перевірка на зіткнення
+function checkCollision(x, y) {
+    return sBody.some(segment => segment.x === x && segment.y === y) ||
+           obstacles.some(obs => obs.x === x && obs.y === y) ||
+           x < 0 || x >= gP.width || y < 0 || y >= gP.height;
+}
+</script>
+</body>
+</html>
